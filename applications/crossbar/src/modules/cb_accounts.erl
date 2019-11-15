@@ -1181,10 +1181,12 @@ audit_message(#{'account_id' := AccountId, 'account_name' := AccountName, 'type'
 %% @end
 %%------------------------------------------------------------------------------
 -spec audit_changes_metadata(map()) -> kz_json:object().
-audit_changes_metadata(#{'account_id' := AccountId, 'account_name' := AccountName, 'type' := Type}=_Map) ->
+audit_changes_metadata(#{'account_id' := AccountId, 'account_name' := AccountName, 'reseller_id' := ResellerId, 'type' := Type}=_Map) ->
     kz_json:from_list([{<<"account_id">>, AccountId}
                       ,{<<"account_name">>, AccountName}
+                      ,{<<"descendants_count">>, length(kapps_util:account_descendants(ResellerId))}
                       ,{<<"timestamp">>, kz_time:current_tstamp()}
+                      ,{<<"source">>, <<"accounts">>}
                       ,{<<"type">>, <<"modified">>}
                       ,{<<"quantity">>, modified_quantity(Type)}
                       ]).
