@@ -1101,6 +1101,8 @@ audit_map_from_context(Context, ?HTTP_DELETE=Method) ->
      ,'reseller_id' => cb_context:reseller_id(Context)
      ,'type' => Method
      };
+audit_map_from_context(Context, ?HTTP_GET=Method) ->
+    audit_map_from_doc(cb_context:doc(Context), Method);
 audit_map_from_context(Context, ?HTTP_PUT=Method) ->
     audit_map_from_doc(cb_context:doc(Context), Method).
 
@@ -1144,6 +1146,7 @@ maybe_audit_reseller(Context, #{'reseller_id' := ResellerId}=Map) ->
 %% @end
 %%------------------------------------------------------------------------------
 -spec modified_quantity(kz_term:ne_binary()) -> kz_term:api_integer().
+modified_quantity(?HTTP_GET) -> 1;
 modified_quantity(?HTTP_PUT) -> 1;
 modified_quantity(?HTTP_DELETE) -> -1.
 
@@ -1174,7 +1177,12 @@ build_audit_log(Map) ->
 %%------------------------------------------------------------------------------
 -spec audit_message(map()) -> kz_term:ne_binary().
 audit_message(#{'account_id' := AccountId, 'account_name' := AccountName, 'type' := Type}=_Map) ->
-    <<"Account ",AccountName/binary," (",AccountId/binary,") has been ",Type/binary>>.
+    <<"Account ",AccountName/binary," (",AccountId/binary,") has been ",(http_to_action(Type))/binary>>.
+
+-spec http_to_action(kz_term:ne_binary()) -> kz_term:ne_binary().
+http_to_action(?HTTP_GET) -> <<"created">>;
+http_to_action(?HTTP_PUT) -> <<"created">>;
+http_to_action(?HTTP_DELETE) -> <<"deleted">>.
 
 %%------------------------------------------------------------------------------
 %% @doc generate audit_log changes metadata
