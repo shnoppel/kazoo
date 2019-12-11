@@ -54,6 +54,7 @@ node_info(Server, Started) ->
           ,{<<"Instance-UUID">>, ecallmgr_fs_node:instance_uuid(Server)}
           ,{<<"Interfaces">>, ecallmgr_fs_node:interfaces(Server)}
           ,{<<"Sessions">>, ecallmgr_fs_node:sessions(Server)}
+          ,{<<"Version">>, ecallmgr_fs_node:version(Server)}
           ])
     catch
         _E:_R:_ST -> 'undefined'
