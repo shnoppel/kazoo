@@ -27,6 +27,7 @@
 -export([hostname/1]).
 -export([interface/1, interface/2]).
 -export([interfaces/1]).
+-export([sessions/1]).
 -export([instance_uuid/1]).
 -export([fetch_timeout/0, fetch_timeout/1]).
 -export([init/1
@@ -309,6 +310,9 @@ handle_call({'interface', Interface}, _, #state{info=Info}=State) ->
     {'reply', Resp, State};
 handle_call('instance_uuid', _, #state{info=Info}=State) ->
     {'reply', kz_json:get_ne_binary_value([<<"Runtime-Info">>, <<"Core-UUID">>], Info), State};
+handle_call('sessions', _, #state{info=Info}=State) ->
+    Resp = kz_json:get_json_value([<<"Runtime-Info">>, <<"sessions">>], Info),
+    {'reply', Resp, State};
 handle_call('info', _, #state{info=Info}=State) ->
     {'reply', Info, State};
 handle_call('node', _, #state{node=Node}=State) ->
@@ -565,6 +569,10 @@ interface(Node, Profile) ->
 -spec instance_uuid(atom() | binary()) -> kz_term:api_ne_binary().
 instance_uuid(Node) ->
     gen_server:call(find_srv(Node), 'instance_uuid').
+
+-spec sessions(fs_node()) -> kz_term:api_binary().
+sessions(Srv) ->
+    gen_server:call(find_srv(Srv), 'sessions').
 
 -spec info(fs_node()) -> kz_term:api_object().
 info(Srv) ->
