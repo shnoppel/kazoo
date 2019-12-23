@@ -203,7 +203,7 @@ migrate(Pause) ->
     _ = migrate(Pause, Databases),
 
     _ = kazoo_bindings:map(binding('migrate'), []),
-
+    _ = maybe_log_telemetry_warning(),
     'no_return'.
 
 -spec migrate(integer(), kz_term:ne_binaries()) -> 'no_return'.
@@ -2242,3 +2242,19 @@ migration_4_0_ran() ->
 migration_ran() ->
     lager:info("migrating"),
     'no_return' =:= migrate().
+
+-spec maybe_log_telemetry_warning() -> 'no_return'.
+maybe_log_telemetry_warning() ->
+    maybe_log_telemetry_warning(kapps_config:get_boolean(<<"telemetry">>, <<"telemetry_enabled">>, <<"true">>)).
+
+-spec maybe_log_telemetry_warning(boolean()) -> 'no_return'.
+maybe_log_telemetry_warning('false') -> 'no_return';
+maybe_log_telemetry_warning('true'=Enabled) ->
+    lager:warning("anonymous usage statistics are ~s.", [Enabled]),
+    lager:warning("please modify system_config.telemetry if you wish to disable anonymous metric gathering."),
+    maybe_log_telemetry_warning(Enabled, wg_util:days_remaining()).
+
+-spec maybe_log_telemetry_warning(boolean(), non_neg_integer()) -> 'no_return'.
+maybe_log_telemetry_warning('true', Days) when is_integer(Days) andalso Days > 0 ->
+    lager:warning("statistics gathering will activate in ~s days", [Days]),
+    'no_return'.
