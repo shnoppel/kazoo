@@ -14,7 +14,11 @@
 -export([start_link/0]).
 -export([init/1]).
 
+-include_lib("kazoo_stdlib/include/kz_types.hrl").
+
 -define(SERVER, ?MODULE).
+-define(CHILDREN, [?WORKER('kazoo_telemetry_leader')
+                  ]).
 
 %%==============================================================================
 %% API functions
@@ -44,6 +48,7 @@ init([]) ->
     RestartStrategy = 'one_for_one',
     MaxRestarts = 5,
     MaxSecondsBetweenRestarts = 10,
-
     SupFlags = {RestartStrategy, MaxRestarts, MaxSecondsBetweenRestarts},
-    {'ok', {SupFlags, []}}.
+    {'ok', {SupFlags, ?CHILDREN}}.
+
+

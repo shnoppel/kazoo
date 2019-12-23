@@ -1,6 +1,6 @@
 {application, kazoo_telemetry,
  [
-  {description, "Kazoo Telemetry gathers anonymized statistics for the system and applications"},
+  {description, "Kazoo Telemetry gathers anonymized statistics of the cluster and running applications"},
   {vsn, "4.0.0"},
   {modules, []},
   {registered, [kazoo_telemetry_sup]},
