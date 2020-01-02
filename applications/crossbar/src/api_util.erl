@@ -1206,13 +1206,21 @@ finish_request(_Req, Context) ->
 -spec maybe_cleanup_file(binary()) -> 'ok'.
 maybe_cleanup_file(<<>>) -> 'ok';
 maybe_cleanup_file(File) ->
-    _P = spawn(fun() -> cleanup_file(File) end),
+    _P = kz_process:spawn(fun() -> cleanup_file(File) end),
     lager:debug("deleting ~s in ~p", [File, _P]).
 
 -spec cleanup_file(file:filename_all()) -> 'ok'.
 cleanup_file(File) ->
+    cleanup_file(File, file:read_file_info(File)).
+
+-spec cleanup_file(file:filename_all(), {'ok', #file_info{}} | {'error', any()}) -> 'ok'.
+cleanup_file(File, {'ok', #file_info{size=Size}}) ->
+    SleepMs = round(math:log(Size)) * 10,
+    timer:sleep(SleepMs),
     'ok' = file:delete(File),
-    lager:debug("deleted file ~s", [File]).
+    lager:debug("deleted file ~s after ~pms", [File, SleepMs]);
+cleanup_file(_File, {'error', Error}) ->
+    lager:info("failed to delete ~s: ~p", [_File, Error]).
 
 %%------------------------------------------------------------------------------
 %% @doc This function will create the content for the response body.
