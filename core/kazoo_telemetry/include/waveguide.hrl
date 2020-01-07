@@ -1,4 +1,4 @@
-    %%%-----------------------------------------------------------------------------
+%%%-----------------------------------------------------------------------------
 %%% @copyright (C) 2010-2019, 2600Hz
 %%% @doc
 %%% This Source Code Form is subject to the terms of the Mozilla Public
@@ -12,9 +12,11 @@
 -include("kazoo_telemetry.hrl").
 
 -define(DAY_IN_SECONDS, 86400).
+-define(DAY_IN_MS, ?DAY_IN_SECONDS * 1000).
 
 -define(WG_CAT, <<(?TELEMETRY_CAT)/binary,".waveguide">>).
 
+-define(WG_ACTIVATION_PING, <<"activation">>).
 -define(WG_HANDSHAKE_PING, <<"handshake">>).
 -define(WG_MAIN_PING, <<"main">>).
 -define(WG_VERSION, <<"0.1.0">>).
@@ -26,7 +28,7 @@
        ).
 
 -define(WG_ACTIVATION
-       ,kapps_config:get_integer(?WG_CAT, <<"activation">>, 'undefined', <<"default">>)
+       ,kapps_config:get_integer(?WG_CAT, <<"activation">>, kz_time:current_tstamp(), <<"default">>)
        ).
 
 -define(WG_ANONYMIZE_CLUSTER
@@ -34,7 +36,7 @@
        ).
 
 -define(WG_ENABLED
-       ,kapps_config:get_boolean(?WG_CAT, <<"waveguide_enabled">>, 'true', <<"default">>)
+       ,kapps_config:is_true(?WG_CAT, <<"waveguide_enabled">>, 'true')
        ).
 
 -define(WG_GRACE_PERIOD
@@ -46,7 +48,12 @@
        ).
 
 -define(WG_URL
-       ,kapps_config:get_ne_binary(?WG_CAT, <<"waveguide_url">>, <<"http://waveguide.p.zswitch.net">>, <<"default">>)
+       ,kapps_config:get_ne_binary(?WG_CAT, <<"waveguide_url">>, <<"http://waveguide.p.zswitch.net/api">>, <<"default">>)
+       ).
+
+-define(is_valid_ping(Ping), Ping =:= ?WG_ACTIVATION_PING
+        orelse Ping =:= ?WG_HANDSHAKE_PING
+        orelse Ping =:= ?WG_MAIN_PING
        ).
 
 -define(WAVEGUIDE_HRL, 'true').
