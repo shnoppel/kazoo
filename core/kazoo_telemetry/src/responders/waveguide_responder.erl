@@ -1,5 +1,5 @@
 %%%-----------------------------------------------------------------------------
-%%% @copyright (C) 2012-2019, 2600Hz
+%%% @copyright (C) 2012-2020, 2600Hz
 %%% @doc
 %%% This Source Code Form is subject to the terms of the Mozilla Public
 %%% License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -7,184 +7,225 @@
 %%%
 %%% @end
 %%%-----------------------------------------------------------------------------
--module (waveguide_responder).
+-module(waveguide_responder).
 
--behaviour (gen_server).
+-behaviour(gen_statem).
 
 -export([start_link/0
-        ,ping/0, ping/1
+        ,status/0
         ]).
+
 -export([init/1
-        ,handle_call/3
-        ,handle_cast/2
-        ,handle_info/2
-        ,terminate/2
-        ,code_change/3
+        ,callback_mode/0
+        ,terminate/3
+        ,code_change/4
+        ]).
+
+-export([grace_period/3
+        ,activating/3
+        ,handshaking/3
+        ,submitting/3
+        ,waiting/3
         ]).
 
 -define(SERVER, ?MODULE).
 
 -define(HANDSHAKE_TIMER, 5000).
+-define(RETRY_INTERVAL, 60000).
+-define(TRANSITION_TIMER, 0).
 
 -include("waveguide.hrl").
 
--record(state, {activation_ts = 'undefined' :: non_neg_integer() | 'undefined'
-               ,enabled = 'true' :: boolean()
-               ,handshake_tref :: timer:tref()
-               }).
+-record(state, {}).
+
 -type state() :: #state{}.
+-type statem_events() :: 'ping' | 'timeout' | 'wakeup'.
+-type statem_state() :: 'activating' | 'grace_period' | 'handshaking' | 'submitting' | 'waiting'.
+-type statem_reply() :: {'next_state', statem_state(), state()} |
+                        'repeat_state_and_data' |
+                        {'keep_state', state()} |
+                        {'keep_state_and_data', [{'state_timeout', non_neg_integer(), 'timeout' | 'retry'}]}.
 
 %%%=============================================================================
 %%% API
 %%%=============================================================================
 
 %%------------------------------------------------------------------------------
-%% @doc
-%% @end
-%%------------------------------------------------------------------------------
--spec ping() -> 'no_return'.
-ping() -> ping(?WG_MAIN_PING).
-
--spec ping(kz_term:ne_binary()) -> 'no_return'.
-ping(Ping) ->
-    gen_server:call(?SERVER, {'ping', Ping}),
-
-    %  of
-    %     {'reply', {'ok', _Data} _} -> ok;
-    %     {'reply', {'error', _}, _} -> ok
-    % end,
-    'no_return'.
-
-%%------------------------------------------------------------------------------
-%% @doc Starts the server
+%% @doc Starts the waveguide statem
 %% @end
 %%------------------------------------------------------------------------------
 -spec start_link() -> kz_types:startlink_ret().
-start_link() ->
-    gen_server:start_link({'local', ?SERVER}, ?MODULE, [], []).
-
-%%%=============================================================================
-%%% gen_server callbacks
-%%%=============================================================================
+start_link()  ->
+    case ?WG_ENABLED of
+        'false' -> 'ignore';
+        'true' ->
+            gen_statem:start_link({'local', ?SERVER}, ?MODULE, [], [])
+    end.
 
 %%------------------------------------------------------------------------------
-%% @doc Initializes the server
+%% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec init([]) -> {'ok', state()}.
+-spec status() -> {statem_state(), state()}.
+status() ->
+    sys:get_state('waveguide_responder').
+
+%%%=============================================================================
+%%% gen_statem callbacks
+%%%=============================================================================
+
+%%------------------------------------------------------------------------------
+%% @doc Initializes the waveguide statem
+%% @end
+%%------------------------------------------------------------------------------
+-spec init([]) -> {'ok', 'grace_period', state()}.
 init([]) ->
-    TRef = erlang:start_timer(5000, self(), 'handshake'),
-    {'ok', #state{activation_ts=activation_ts()
-                 ,enabled=enabled()
-                 ,handshake_tref=TRef
-                 }}.
+    process_flag('trap_exit', 'true'),
+    {'ok', 'grace_period', #state{}}.
 
 %%------------------------------------------------------------------------------
-%% @doc Handling call messages
+%% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec handle_call(any(), kz_term:pid_ref(), state()) -> kz_types:handle_call_ret_state(state()).
-handle_call(_Request, _From, State) ->
-    {'reply', 'ok', State}.
+-spec callback_mode() -> ['state_functions' | 'state_enter'].
+callback_mode() ->
+    ['state_functions','state_enter'].
 
 %%------------------------------------------------------------------------------
-%% @doc Handling cast messages
+%% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec handle_cast(any(), state()) -> kz_types:handle_cast_ret_state(state()).
-handle_cast({'ping', ?WG_MAIN_PING=_Ping}, State) when State#state.enabled =:= 'true' ->
-    % {'ok', Data} = waveguide_reducer:ping(Ping),
-    lager:notice("Main Ping"),
-    % {Op, _Msg} = wg_httpc:put(Data),
-    {'noreply', State};
-handle_cast({'ping', ?WG_HANDSHAKE_PING=_Ping}, State) ->
-    lager:notice("Handshake Ping"),
-    {'noreply', State};
-handle_cast(_Msg, State) ->
-    {'noreply', State}.
+-spec terminate(any(), atom(), statem_state()) -> 'ok'.
+terminate(_Reason, _StateName, _State) ->
+    lager:debug("~s terminating: ~p", [?SERVER, _Reason]).
 
 %%------------------------------------------------------------------------------
-%% @doc Handling all non call/cast messages
+%% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec handle_info(any(), state()) -> kz_types:handle_info_ret_state(state()).
-handle_info({'timeout', _Pid, 'main'}, State) ->
-    main_ping(),
-    {'noreply', State};
-handle_info({'timeout', _Pid, 'handshake'}, State) ->
-    NewState = case wg_util:days_remaining() of
-        0 ->
-            handshake_ping(),
-            State;
-        Days ->
-            lager:debug("~p more days until waveguide activation", [Days]),
-            TRef = erlang:start_timer(?DAY_IN_SECONDS, self(), 'handshake'),
-            State#state{handshake_tref=TRef}
-    end,
-    {'noreply', NewState};
-handle_info(_Info, State) ->
-    {'noreply', State}.
+-spec code_change(any(), atom(), statem_state(), any()) -> {'ok', atom(), statem_state()}.
+code_change(_OldVsn, StateName, State, _Extra) ->
+    {'ok', StateName, State}.
 
 %%------------------------------------------------------------------------------
-%% @doc This function is called by a gen_server when it is about to
-%% terminate. It should be the opposite of Module:init/1 and do any
-%% necessary cleaning up. When it returns, the gen_server terminates
-%% with Reason. The return value is ignored.
-%%
+%% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec terminate(any(), state()) -> 'ok'.
-terminate(_Reason, _State) ->
-    'ok'.
+-spec grace_period(gen_statem:event_type(), statem_events(), state()) -> statem_reply().
+grace_period('enter', _OldState, State) ->
+    _ = timer:apply_after(?TRANSITION_TIMER, 'gen_statem', 'cast', [?SERVER, 'ping']),
+    {'keep_state', State};
+grace_period('cast', 'ping', State) ->
+    case wg_util:days_remaining() of
+        Days when Days > 0 ->
+            lager:notice("waveguide grace period has ~p days remaining", [Days]),
+            _ = create_alert(Days),
+            {'keep_state_and_data',[{'state_timeout', ?DAY_IN_MS, 'retry'}]};
+        _ ->
+            {'next_state', 'activating', State}
+    end;
+grace_period('state_timeout', 'retry', _State) ->
+    lager:notice("grace period expired ... activating waveguide."),
+    'repeat_state_and_data'.
 
 %%------------------------------------------------------------------------------
-%% @doc Convert process state when code is changed
+%% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec code_change(any(), state(), any()) -> {'ok', state()}.
-code_change(_OldVsn, State, _Extra) ->
-    {'ok', State}.
+-spec activating(gen_statem:event_type(), statem_events(), state()) -> statem_reply().
+activating('enter', _OldState, State) ->
+    lager:notice("entered activation state"),
+    _ = timer:apply_after(?TRANSITION_TIMER, 'gen_statem', 'cast', [?SERVER, 'ping']),
+    {'keep_state', State};
+activating('cast', 'ping', State) ->
+    {'ok', Data} = waveguide_reducer:ping(?WG_ACTIVATION_PING),
+    case wg_httpc:post(Data) of
+        {'ok', _} ->
+            {'next_state', 'handshaking', State};
+        {'retry', _} ->
+            lager:notice("activation retry initiated"),
+            {'keep_state_and_data',[{'state_timeout', ?TRANSITION_TIMER, 'retry'}]}
+    end;
+activating('state_timeout', 'retry', _State) ->
+    lager:debug("activation timeout, scheduling retry"),
+    'repeat_state_and_data'.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% @end
+%%------------------------------------------------------------------------------
+-spec handshaking(gen_statem:event_type(), statem_events(), state()) -> statem_reply().
+handshaking('enter', _OldState, State) ->
+    _ = timer:apply_after(?TRANSITION_TIMER, 'gen_statem', 'cast', [?SERVER, 'ping']),
+    {'keep_state', State};
+handshaking('cast', 'ping', State) ->
+    lager:notice("intiating handshake ping"),
+    {'ok', Data} = waveguide_reducer:ping(?WG_HANDSHAKE_PING),
+    case wg_httpc:post(Data) of
+        {'retry', _} ->
+            {'keep_state_and_data',[{'state_timeout', ?TRANSITION_TIMER, 'retry'}]};
+        {'ok', _} ->
+            {'next_state', 'submitting', State}
+    end;
+handshaking('state_timeout', 'retry', _State) ->
+    lager:debug("handshake timeout, scheduling retry"),
+    'repeat_state_and_data'.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% @end
+%%------------------------------------------------------------------------------
+-spec submitting(gen_statem:event_type(), statem_events(), state()) -> statem_reply().
+submitting('enter', _OldState, State) ->
+    _ = timer:apply_after(?TRANSITION_TIMER, 'gen_statem', 'cast', [?SERVER, 'ping']),
+    {'keep_state', State};
+submitting('cast', 'ping', State) ->
+    lager:notice("initiating waveguide ping"),
+    {'ok', Data} = waveguide_reducer:ping(?WG_MAIN_PING),
+    case wg_httpc:post(Data) of
+        {'retry', _} ->
+            {'keep_state_and_data',[{'state_timeout', ?TRANSITION_TIMER, 'timeout'}]};
+        {'ok', _} ->
+            {'next_state', 'waiting', State}
+    end;
+submitting('state_timeout', 'timeout', _State) ->
+    lager:debug("main ping timeout, scheduling retry"),
+    'repeat_state_and_data'.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% @end
+%%------------------------------------------------------------------------------
+-spec waiting(gen_statem:event_type(), statem_events(), state()) -> statem_reply().
+waiting('enter', _OldState, State) ->
+    {'keep_state', State, [{'state_timeout', ?DAY_IN_SECONDS, 'wakeup'}]};
+waiting('state_timeout', 'wakeup', State) ->
+    lager:debug("waveguide_responder waking up, scheduling main ping."),
+    {'next_state', 'submitting', State}.
 
 %%%=============================================================================
-%%% Internal functions
+%%% Internal Functions
 %%%=============================================================================
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec activation_ts() -> non_neg_integer().
-activation_ts() ->
-    maybe_activate(?WG_ACTIVATION).
+create_alert(Days) ->
+    DaysBin = integer_to_binary(Days),
+    {'ok', AccountId} = kapps_util:get_master_account_id(),
+    Props = [{<<"category">>, <<"kazoo_telemetry">>}
+            ],
+    From = [kz_json:from_list([{<<"type">>, <<"account">>}
+                              ,{<<"value">>, AccountId}
+                              ])
+           ],
+    To = [kz_json:from_list([{<<"type">>, AccountId}
+                            ,{<<"value">>, <<"admins">>}
+                            ])
+         ],
+    Title = <<"Kazoo Telemetry grace period active">>,
+    Msg = <<"Kazoo Telemetry will automatically enable in ",DaysBin/binary," days.">>,
+    {'ok', AlertJObj} = kapps_alert:create(Title, Msg, From, To, Props),
+    {'ok', _} = kapps_alert:save(AlertJObj).
 
-%%------------------------------------------------------------------------------
-%% @doc
-%% @end
-%%------------------------------------------------------------------------------
--spec maybe_activate('undefined' | non_neg_integer()) -> non_neg_integer().
-maybe_activate('undefined') ->
-    Timestamp = kz_time:current_tstamp(),
-    kapps_config:set_default(?WG_CAT, <<"activation">>, Timestamp),
-    maybe_activate(Timestamp);
-maybe_activate(Timestamp) when is_integer(Timestamp) -> Timestamp.
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% @end
-%%------------------------------------------------------------------------------
--spec enabled() -> boolean().
-enabled() -> ?WG_ENABLED.
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% @end
-%%------------------------------------------------------------------------------
-handshake_ping() ->
-    gen_server:cast(?SERVER, {'ping', ?WG_HANDSHAKE_PING}).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% @end
-%%------------------------------------------------------------------------------
-main_ping() ->
-    gen_server:cast(?SERVER, {'ping', ?WG_MAIN_PING}).
