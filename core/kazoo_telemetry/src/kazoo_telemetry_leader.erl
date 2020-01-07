@@ -1,5 +1,5 @@
 %%%-----------------------------------------------------------------------------
-%%% @copyright (C) 2010-2019, 2600Hz
+%%% @copyright (C) 2010-2020, 2600Hz
 %%% @doc
 %%% This Source Code Form is subject to the terms of the Mozilla Public
 %%% License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -27,9 +27,8 @@
 -define(SERVER, ?MODULE).
 
 -record(state, {leader = 'undefined' :: node() | 'undefined'
-               ,leader_poll_tref :: timer:tref()
+               ,leader_poll_tref :: reference()
                ,responders :: kz_term:atoms()
-               ,responder_pids :: [pid()]
                }).
 
 -type state() :: #state{}.
@@ -67,7 +66,6 @@ init([]) ->
     lager:notice("starting telemetry leader"),
     LeaderCheck = erlang:start_timer(?TM_LEADER_TICK, self(), 'leader_poll'),
     {'ok', #state{responders=?TM_RESPONDERS
-                 ,leader=leader()
                  ,leader_poll_tref = LeaderCheck
                  }}.
 
@@ -88,12 +86,13 @@ handle_cast('leader_change', State)  ->
     NewState = State#state{leader=leader()},
     case NewState#state.leader =:= node() of
         'false' ->
-            lager:debug("kazoo_telemetry leader is now ~s.", [NewState#state.leader]);
+            lager:debug("kazoo_telemetry leader is now ~s.", [NewState#state.leader]),
+            {'noreply', NewState};
         'true' ->
             lager:debug("elected kazoo_telemetry_leader starting responders"),
-            _Pids = lists:foldl(fun(App, Acc) -> {'ok', Pid} = (kz_term:to_atom(App)):start_link(), [{App, Pid} | Acc] end,[], State#state.responders)
-    end,
-    {'noreply', NewState};
+            _Pids = lists:foldl(fun(App, Acc) -> {'ok', Pid} = (kz_term:to_atom(App)):start_link(), [{App, Pid} | Acc] end,[], State#state.responders),
+            {'noreply', NewState}
+    end;
 handle_cast(_Msg, State) ->
     {'noreply', State}.
 
