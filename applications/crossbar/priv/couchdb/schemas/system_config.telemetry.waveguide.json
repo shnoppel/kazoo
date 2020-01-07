@@ -1,1 +1,42 @@
-{"type":"object","properties":{"waveguide_url":{"type":"string","description":"telemetry waveguide waveguide_url","default":"http://waveguide.p.zswitch.net"},"waveguide_enabled":{"type":"boolean","description":"telemetry waveguide waveguide_enabled","default":true},"include_services":{"type":"boolean","description":"telemetry waveguide include_services","default":true},"hash_algorithm":{"type":"string","description":"telemetry waveguide hash_algorithm","default":"sha"},"grace_period":{"type":"integer","description":"telemetry waveguide grace_period","default":1209600},"cluster_id_anonymized":{"type":"boolean","description":"telemetry waveguide cluster_id_anonymized","default":true},"activation":{"type":"integer","description":"telemetry waveguide activation"}},"description":"Schema for telemetry.waveguide system_config","_id":"system_config.telemetry.waveguide","$schema":"http://json-schema.org/draft-04/schema#"}
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "_id": "system_config.telemetry.waveguide",
+    "description": "Schema for telemetry.waveguide system_config",
+    "properties": {
+        "activation": {
+            "description": "telemetry waveguide activation",
+            "type": "integer"
+        },
+        "cluster_id_anonymized": {
+            "default": true,
+            "description": "telemetry waveguide cluster_id_anonymized",
+            "type": "boolean"
+        },
+        "grace_period": {
+            "default": 1209600,
+            "description": "telemetry waveguide grace_period",
+            "type": "integer"
+        },
+        "hash_algorithm": {
+            "default": "sha",
+            "description": "telemetry waveguide hash_algorithm",
+            "type": "string"
+        },
+        "include_services": {
+            "default": true,
+            "description": "telemetry waveguide include_services",
+            "type": "boolean"
+        },
+        "waveguide_enabled": {
+            "default": true,
+            "description": "telemetry waveguide waveguide_enabled",
+            "type": "boolean"
+        },
+        "waveguide_url": {
+            "default": "http://waveguide.p.zswitch.net",
+            "description": "telemetry waveguide waveguide_url",
+            "type": "string"
+        }
+    },
+    "type": "object"
+}

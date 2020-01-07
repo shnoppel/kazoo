@@ -1,1 +1,33 @@
-{"type":"object","properties":{"telemetry_enabled":{"type":"boolean","description":"telemetry telemetry_enabled","default":"true"},"responders":{"type":"array","items":{"type":"string"},"description":"telemetry responders","default":["waveguide_responder"]},"leader_tick_ms":{"type":"integer","description":"telemetry leader_tick_ms","default":60000},"leader_app":{"type":"string","description":"telemetry leader_app","default":"ecallmgr"}},"description":"Schema for telemetry system_config","_id":"system_config.telemetry","$schema":"http://json-schema.org/draft-04/schema#"}
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "_id": "system_config.telemetry",
+    "description": "Schema for telemetry system_config",
+    "properties": {
+        "leader_app": {
+            "default": "ecallmgr",
+            "description": "telemetry leader_app",
+            "type": "string"
+        },
+        "leader_tick_ms": {
+            "default": 60000,
+            "description": "telemetry leader_tick_ms",
+            "type": "integer"
+        },
+        "responders": {
+            "default": [
+                "waveguide_responder"
+            ],
+            "description": "telemetry responders",
+            "items": {
+                "type": "string"
+            },
+            "type": "array"
+        },
+        "telemetry_enabled": {
+            "default": "true",
+            "description": "telemetry telemetry_enabled",
+            "type": "boolean"
+        }
+    },
+    "type": "object"
+}
