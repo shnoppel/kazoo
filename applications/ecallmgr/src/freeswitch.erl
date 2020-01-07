@@ -14,7 +14,6 @@
 -export([version/1
         ,version/2
         ,release/1
-        ,status/1
         ]).
 -export([noevents/1]).
 -export([close/1]).
