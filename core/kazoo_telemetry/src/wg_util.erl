@@ -1,5 +1,5 @@
 %%%-----------------------------------------------------------------------------
-%%% @copyright (C) 2012-2019, 2600Hz
+%%% @copyright (C) 2012-2020, 2600Hz
 %%% @doc
 %%% This Source Code Form is subject to the terms of the Mozilla Public
 %%% License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -9,11 +9,19 @@
 %%%-----------------------------------------------------------------------------
 -module(wg_util).
 
--export([cluster_id/0
+-export([activation_ts/0
+        ,cluster_id/0
         ,days_remaining/0
         ]).
 
 -include("waveguide.hrl").
+
+%%------------------------------------------------------------------------------
+%% @doc return cluster_id, anonymized if configured.
+%% @end
+%%------------------------------------------------------------------------------
+-spec activation_ts() -> non_neg_integer() | 'undefined'.
+activation_ts() -> ?WG_ACTIVATION.
 
 %%------------------------------------------------------------------------------
 %% @doc return cluster_id, anonymized if configured.
@@ -33,7 +41,8 @@ days_remaining() ->
     days_remaining(Remaining).
 
 -spec days_remaining(float()) -> non_neg_integer().
-days_remaining(Days) when Days > 0 -> trunc(Days);
+days_remaining(Days) when Days > 0 ->
+    trunc(Days);
 days_remaining(_) -> 0.
 
 %%------------------------------------------------------------------------------
