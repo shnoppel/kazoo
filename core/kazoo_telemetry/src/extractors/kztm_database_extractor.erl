@@ -39,8 +39,8 @@ resolve_database_topology(Plan) ->
 %%------------------------------------------------------------------------------
 -spec maybe_extract_servers(map()) -> [map()].
 maybe_extract_servers(#{'server' := _Server, 'others' := Others}=Plan) ->
-   Others0 = [S || {_Tag, S} <- Others],
-   [Plan | Others0].
+    Others0 = [S || {_Tag, S} <- Others],
+    [Plan | Others0].
 
 %%------------------------------------------------------------------------------
 %% @doc maybe generate a summary for each server in the plan

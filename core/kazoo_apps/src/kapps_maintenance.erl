@@ -2256,7 +2256,7 @@ maybe_log_telemetry_warning('true'=Enabled) ->
 
 -spec maybe_log_telemetry_warning(boolean(), non_neg_integer()) -> 'no_return'.
 maybe_log_telemetry_warning('true', Days)
-    when is_integer(Days)
-        andalso Days > 0 ->
+  when is_integer(Days)
+       andalso Days > 0 ->
     lager:warning("statistics gathering will activate in ~s days", [Days]),
     'no_return'.

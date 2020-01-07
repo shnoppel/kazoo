@@ -77,7 +77,7 @@ ping(?WG_MAIN_PING=Ping) ->
 ping(_Other) ->
     {'error', 'invalid_ping_type'}.
 
-%------------------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 %% @doc simple ping envelope for status or info purposes
 %% @end
 %%------------------------------------------------------------------------------
@@ -88,7 +88,7 @@ info_ping(Ping) ->
                       ,{<<"type">>, Ping}
                       ]).
 
-%------------------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 %% @doc construct a ping envelope from the reducer object
 %% @end
 %%------------------------------------------------------------------------------
@@ -237,10 +237,10 @@ dedupe_media_servers(Nodes) ->
 dedupe_media_servers([], Acc) -> Acc;
 dedupe_media_servers([Node | Nodes], Acc) ->
     case kz_json:get_ne_binary_value(<<"type">>, Node) of
-         <<"ecallmgr">> ->
-             MediaServers = kz_json:get_value([<<"metadata">>, <<"media_servers">>], Node),
-             dedupe_media_servers(Nodes, kz_json:merge(MediaServers, Acc));
-         _ -> dedupe_media_servers(Nodes, Acc)
+        <<"ecallmgr">> ->
+            MediaServers = kz_json:get_value([<<"metadata">>, <<"media_servers">>], Node),
+            dedupe_media_servers(Nodes, kz_json:merge(MediaServers, Acc));
+        _ -> dedupe_media_servers(Nodes, Acc)
     end.
 
 %%------------------------------------------------------------------------------
@@ -262,7 +262,7 @@ rollup_freeswitch_jobj(K, V, Acc) when is_binary(V) ->
     Versions = kz_json:get_value(Key, Acc, []),
     kz_json:set_value(Key, [V | Versions], Acc);
 rollup_freeswitch_jobj([<<"startup">>]=_K, V, Acc)
-    when is_integer(V) ->
+  when is_integer(V) ->
     Key = <<"runtime.stats.freeswitch.uptime">>,
     Uptimes = kz_json:get_value(Key, Acc, []),
     kz_json:set_value(Key, [kz_time:elapsed_s(V) | Uptimes], Acc);
@@ -321,10 +321,10 @@ reduce_services_jobj(Obj, Acc, _IncludeServices) ->
 normalize_service_items(Obj, Acc) ->
     kz_json:foldl(fun normalize_services_items_foldl/3, Acc, Obj).
 
-%------------------------------------------------------------------------------
-% @doc
-% @end
-%------------------------------------------------------------------------------
+%%------------------------------------------------------------------------------
+%% @doc
+%% @end
+%%------------------------------------------------------------------------------
 -spec normalize_services_items_foldl(kz_term:binary(), kz_term:ne_binary() | kz_term:binaries() | non_neg_integer(), kz_json:objects()) -> kz_json:object().
 normalize_services_items_foldl(K, V, Acc) ->
     kz_json:set_value(<<"services.",(format_wg_id(K))/binary>>, V, Acc).
