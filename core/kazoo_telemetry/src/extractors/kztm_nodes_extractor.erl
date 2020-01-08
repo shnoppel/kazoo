@@ -19,7 +19,7 @@
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec extract() -> kz_json:objects().
+-spec extract() -> kz_json:object().
 extract() ->
     Nodes = normalize_kz_nodes(),
     kz_json:from_list([{<<"nodes">>, Nodes}]).
@@ -80,9 +80,9 @@ maybe_extract_apps_metadata(#kz_node{kapps=Apps}, Acc) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% @end
+%% @extract_node_metadata
 %%------------------------------------------------------------------------------
--spec app_metadata({kz_term:ne_binary(), kz_types:kapps_info()}, kz_json:objects()) -> kz_json:objects().
+-spec app_metadata({kz_term:ne_binary(), #whapp_info{}}, kz_json:objects()) -> kz_json:objects().
 app_metadata({AppName, {'whapp_info', StartTs, _}}, Acc) ->
     JObj = kz_json:from_list([{<<"name">>, AppName}
                              ,{<<"startup">>, StartTs}

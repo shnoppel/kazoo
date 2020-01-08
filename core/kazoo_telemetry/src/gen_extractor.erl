@@ -9,4 +9,4 @@
 %%%-----------------------------------------------------------------------------
 -module(gen_extractor).
 
--callback extract() -> kz_json:object().
+-callback extract() -> kz_json:object() | kz_json:objects().
