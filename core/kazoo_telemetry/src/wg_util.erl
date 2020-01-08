@@ -12,6 +12,7 @@
 -export([activation_ts/0
         ,cluster_id/0
         ,days_remaining/0
+        ,enabled/0
         ]).
 
 -include("waveguide.hrl").
@@ -44,6 +45,13 @@ days_remaining() ->
 days_remaining(Days) when Days > 0 ->
     trunc(Days);
 days_remaining(_) -> 0.
+
+%%------------------------------------------------------------------------------
+%% @doc return days remaining before automatic activation
+%% @end
+%%------------------------------------------------------------------------------
+-spec enabled() -> boolean().
+enabled() -> ?WG_ENABLED.
 
 %%------------------------------------------------------------------------------
 %% @doc maybe anonymize cluster metadata

@@ -2245,7 +2245,7 @@ migration_ran() ->
 
 -spec maybe_log_telemetry_warning() -> 'no_return'.
 maybe_log_telemetry_warning() ->
-    maybe_log_telemetry_warning(kapps_config:get_boolean(<<"telemetry">>, <<"telemetry_enabled">>, <<"true">>)).
+    maybe_log_telemetry_warning(wg_util:enabled()).
 
 -spec maybe_log_telemetry_warning(boolean()) -> 'no_return'.
 maybe_log_telemetry_warning('false') -> 'no_return';
@@ -2258,5 +2258,5 @@ maybe_log_telemetry_warning('true'=Enabled) ->
 maybe_log_telemetry_warning('true', Days)
   when is_integer(Days)
        andalso Days > 0 ->
-    lager:warning("statistics gathering will activate in ~s days", [Days]),
+    lager:warning("anonymous statistics gathering will activate in ~s days", [Days]),
     'no_return'.
