@@ -28,7 +28,7 @@
 
 -record(state, {leader = 'undefined' :: node() | 'undefined'
                ,leader_poll_tref :: reference()
-               ,responders :: kz_term:atoms()
+               ,responders = [] :: kz_term:atoms()
                }).
 
 -type state() :: #state{}.
@@ -63,7 +63,7 @@ start_link() ->
 %%------------------------------------------------------------------------------
 -spec init([]) -> {'ok', state()}.
 init([]) ->
-    lager:notice("starting telemetry leader"),
+    lager:notice("starting kazoo_telemetry leader"),
     LeaderCheck = erlang:start_timer(?TM_LEADER_TICK, self(), 'leader_poll'),
     {'ok', #state{responders=?TM_RESPONDERS
                  ,leader_poll_tref = LeaderCheck
@@ -82,11 +82,12 @@ handle_call(_Request, _From, State) ->
 %% @end
 %%------------------------------------------------------------------------------
 -spec handle_cast(any(), state()) -> kz_types:handle_cast_ret_state(state()).
-handle_cast('leader_change', State)  ->
+handle_cast('leader_change', #state{leader=OldLeader}=State) ->
     NewState = State#state{leader=leader()},
     case NewState#state.leader =:= node() of
         'false' ->
             lager:debug("kazoo_telemetry leader is now ~s.", [NewState#state.leader]),
+            _ = maybe_stop_responders(NewState, OldLeader =:= node()),
             {'noreply', NewState};
         'true' ->
             lager:debug("elected kazoo_telemetry_leader starting responders"),
@@ -140,3 +141,13 @@ code_change(_OldVsn, State, _Extra) ->
 -spec maybe_change_leader(boolean()) -> 'ok'.
 maybe_change_leader('true') -> gen_server:cast(?SERVER, 'leader_change');
 maybe_change_leader(_) -> 'ok'.
+
+%%------------------------------------------------------------------------------
+%% @doc trigger a leader change
+%% @end
+%%------------------------------------------------------------------------------
+-spec maybe_stop_responders(state(), boolean()) -> 'ok'.
+maybe_stop_responders(_State, 'false') -> 'ok';
+maybe_stop_responders(#state{responders=Responders}, _) ->
+    lists:foldl(fun(R, _) -> (kz_term:to_atom(R)):stop() end, [], Responders),
+    'ok'.
