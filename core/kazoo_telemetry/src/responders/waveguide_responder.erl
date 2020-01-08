@@ -13,6 +13,7 @@
 
 -export([start_link/0
         ,status/0
+        ,stop/0
         ]).
 
 -export([init/1
@@ -62,13 +63,18 @@ start_link()  ->
             gen_statem:start_link({'local', ?SERVER}, ?MODULE, [], [])
     end.
 
+-spec stop() -> 'ok'.
+stop() ->
+    lager:notice("shutting down ~s", [?MODULE]),
+    gen_statem:stop(?SERVER).
+
 %%------------------------------------------------------------------------------
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
 -spec status() -> {statem_state(), state()}.
 status() ->
-    sys:get_state('waveguide_responder').
+    sys:get_state(?MODULE).
 
 %%%=============================================================================
 %%% gen_statem callbacks
@@ -208,9 +214,10 @@ waiting('state_timeout', 'wakeup', State) ->
 %%%=============================================================================
 
 %%------------------------------------------------------------------------------
-%% @doc
+%% @doc create an alert in alerts database
 %% @end
 %%------------------------------------------------------------------------------
+-spec create_alert(non_neg_integer()) -> 'ok'.
 create_alert(Days) ->
     DaysBin = integer_to_binary(Days),
     {'ok', AccountId} = kapps_util:get_master_account_id(),
@@ -224,8 +231,9 @@ create_alert(Days) ->
                             ,{<<"value">>, <<"admins">>}
                             ])
          ],
-    Title = <<"Kazoo Telemetry grace period active">>,
-    Msg = <<"Kazoo Telemetry will automatically enable in ",DaysBin/binary," days.">>,
+    Title = <<"kazoo telemetry grace period active">>,
+    Msg = <<"kazoo telemetry will automatically enable in ",DaysBin/binary," days.">>,
     {'ok', AlertJObj} = kapps_alert:create(Title, Msg, From, To, Props),
-    {'ok', _} = kapps_alert:save(AlertJObj).
+    {'ok', _} = kapps_alert:save(AlertJObj),
+    'ok'.
 
