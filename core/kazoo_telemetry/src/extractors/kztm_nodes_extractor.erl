@@ -79,8 +79,8 @@ maybe_extract_apps_metadata(#kz_node{kapps=Apps}, Acc) ->
     kz_json:set_value(<<"apps">>, AppsMeta, Acc).
 
 %%------------------------------------------------------------------------------
-%% @doc
-%% @extract_node_metadata
+%% @doc extract_node_metadata
+%% @end
 %%------------------------------------------------------------------------------
 -spec app_metadata({kz_term:ne_binary(), #whapp_info{}}, kz_json:objects()) -> kz_json:objects().
 app_metadata({AppName, {'whapp_info', StartTs, _}}, Acc) ->
@@ -107,6 +107,11 @@ maybe_extract_freeswitch_metadata(#kz_node{media_servers=Servers}, Acc) ->
 media_servers(Servers) ->
     lists:foldl(fun media_servers_foldl/2, [], Servers).
 
+%%------------------------------------------------------------------------------
+%% @doc extract runtime stats and version info from media server entry
+%% @end
+%%------------------------------------------------------------------------------
+-spec media_servers_foldl(kz_types:media_servers(), kz_json:objects()) -> kz_json:objects().
 media_servers_foldl({Server, Meta}, Acc) ->
     Stats = kz_json:from_list([{<<"sessions">>, kz_json:get_value(<<"Sessions">>, Meta)}
                               ,{<<"startup">>, kz_json:get_value(<<"Startup">>, Meta)}
@@ -115,11 +120,10 @@ media_servers_foldl({Server, Meta}, Acc) ->
     kz_json:set_value(Server, Stats, Acc).
 
 %%------------------------------------------------------------------------------
-%% @doc
+%% @doc extract current registration count from kamailio server
 %% @end
 %%------------------------------------------------------------------------------
 -spec maybe_extract_kamailio_metadata(kz_types:kz_node(), kz_json:objects()) -> kz_json:objects().
 maybe_extract_kamailio_metadata(#kz_node{roles=[]}, Acc) -> Acc;
 maybe_extract_kamailio_metadata(#kz_node{roles=_Roles, registrations=Registrations}, Acc) ->
     kz_json:set_value(<<"registrations">>, Registrations, Acc).
-
