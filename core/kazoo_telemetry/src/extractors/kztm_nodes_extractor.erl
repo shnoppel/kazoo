@@ -111,7 +111,7 @@ media_servers(Servers) ->
 %% @doc extract runtime stats and version info from media server entry
 %% @end
 %%------------------------------------------------------------------------------
--spec media_servers_foldl(kz_types:media_servers(), kz_json:objects()) -> kz_json:objects().
+-spec media_servers_foldl({kz_term:ne_binary(), kz_json:object()}, kz_json:objects()) -> kz_json:objects().
 media_servers_foldl({Server, Meta}, Acc) ->
     Stats = kz_json:from_list([{<<"sessions">>, kz_json:get_value(<<"Sessions">>, Meta)}
                               ,{<<"startup">>, kz_json:get_value(<<"Startup">>, Meta)}
