@@ -13628,10 +13628,6 @@
       'items':
         'type': string
       'type': array
-    'telemetry_enabled':
-      'default': true
-      'description': telemetry telemetry_enabled
-      'type': boolean
   'type': object
 'system_config.telemetry.waveguide':
   'description': Schema for telemetry.waveguide system_config
