@@ -12,7 +12,6 @@
 -export([activation_ts/0
         ,cluster_id/0
         ,days_remaining/0
-        ,enabled/0
         ]).
 
 -include("waveguide.hrl").
@@ -29,7 +28,8 @@ activation_ts() -> ?WG_ACTIVATION.
 %% @end
 %%------------------------------------------------------------------------------
 -spec cluster_id() -> kz_term:ne_binary().
-cluster_id() -> maybe_anonymize_cluster().
+cluster_id() ->
+    maybe_anonymize_cluster().
 
 %%------------------------------------------------------------------------------
 %% @doc return days remaining before automatic activation
@@ -47,13 +47,6 @@ days_remaining(Days) when Days > 0 ->
 days_remaining(_) -> 0.
 
 %%------------------------------------------------------------------------------
-%% @doc return days remaining before automatic activation
-%% @end
-%%------------------------------------------------------------------------------
--spec enabled() -> boolean().
-enabled() -> ?WG_ENABLED.
-
-%%------------------------------------------------------------------------------
 %% @doc maybe anonymize cluster metadata
 %% @end
 %%------------------------------------------------------------------------------
@@ -63,14 +56,14 @@ maybe_anonymize_cluster() ->
 
 -spec maybe_anonymize_cluster(kz_term:ne_binary()) -> kz_term:ne_binary().
 maybe_anonymize_cluster(ClusterId) ->
-    MaybeAnonymize = kapps_config:get_boolean(?WG_CAT
+    MaybeAnonymize = kapps_config:get_boolean(?TELEMETRY_CAT
                                              ,<<"cluster_id_anonymized">>
-                                             ,?WG_ANONYMIZE_CLUSTER
+                                             ,?ANONYMIZE_CLUSTER
                                              ,<<"default">>),
     maybe_anonymize_cluster(ClusterId, MaybeAnonymize).
 
 %%------------------------------------------------------------------------------
-%% @doc Anonymize cluster_id
+%% @doc anonymize cluster_id
 %% @end
 %%------------------------------------------------------------------------------
 -spec maybe_anonymize_cluster(kz_term:ne_binary(), boolean()) -> kz_term:ne_binary().
