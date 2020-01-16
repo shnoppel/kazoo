@@ -16,7 +16,7 @@
 -include("waveguide.hrl").
 
 %%------------------------------------------------------------------------------
-%% @doc construct defaultt waveguide headers proplist
+%% @doc construct default waveguide headers proplist
 %% @end
 %%------------------------------------------------------------------------------
 -spec default_headers() -> kz_http:headers().
