@@ -1781,6 +1781,20 @@ fix_header(H, V, _) ->
 -spec stop(cowboy_req:req(), cb_context:context()) ->
           stop_return().
 stop(Req0, Context) ->
+    [{Mod, Params} | _] = cb_context:req_nouns(Context),
+    Verb = kz_term:to_lower_binary(cb_context:req_verb(Context)),
+    Event = create_event_name(Context, [<<"error">>, Verb, Mod]),
+    Payload = [{Req0, Context} | Params],
+    try crossbar_bindings:pmap(Event, Payload) of
+        []  -> default_stop(Req0, Context);
+        [{Req, Ctx} | _] -> {'stop', Req, Ctx}
+    catch
+        _:_:_ -> default_stop(Req0, Context)
+    end.
+
+-spec default_stop(cowboy_req:req(), cb_context:context()) ->
+          stop_return().
+default_stop(Req0, Context) ->
     StatusCode = cb_context:resp_error_code(Context),
     lager:info("stopping execution here with status code ~p", [StatusCode]),
 
