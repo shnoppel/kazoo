@@ -252,9 +252,22 @@ get_req_data(Context, Req1, <<"application/x-base64">>, QS) ->
 get_req_data(Context, Req, <<"multipart/", C/binary>>, QS) ->
     lager:debug("multipart ~s content type when getting req data", [C]),
     maybe_extract_multipart(cb_context:set_query_string(Context, QS), Req, QS);
-get_req_data(Context, Req1, ContentType, QS) ->
-    lager:debug("file's content-type: ~p", [ContentType]),
-    extract_file(cb_context:set_query_string(Context, QS), ContentType, Req1).
+get_req_data(Context, Req, ContentType, QS) ->
+    [{Mod, Params} | _] = cb_context:req_nouns(Context),
+    Method = kz_term:to_lower_binary(cb_context:method(Context)),
+    Event = create_event_name(Context, [<<"parse_body">>, Method, Mod]),
+    Payload = [Req | Params],
+    try crossbar_bindings:map(Event, Payload) of
+        [{'ok', Body}] ->
+            set_request_data_in_context(Context, Req, Body, QS);
+        [{'error', Error}] ->
+            {'stop', Req, cb_context:add_system_error(Error, Context)};
+        _Else ->
+            lager:debug("file's content-type: ~p", [ContentType]),
+            extract_file(cb_context:set_query_string(Context, QS), ContentType, Req)
+    catch
+        _:_:_ -> extract_file(cb_context:set_query_string(Context, QS), ContentType, Req)
+    end.
 
 -spec maybe_extract_multipart(cb_context:context(), cowboy_req:req(), kz_json:object()) ->
           {cb_context:context(), cowboy_req:req()} |
