@@ -1658,6 +1658,19 @@ create_resp_envelope(Context) ->
 
 -spec do_create_resp_envelope(cb_context:context()) -> kz_json:object().
 do_create_resp_envelope(Context) ->
+    [{Mod, Params} | _] = cb_context:req_nouns(Context),
+    Verb = kz_term:to_lower_binary(cb_context:req_verb(Context)),
+    Event = create_event_name(Context, list_to_binary(["response_envelope.", Verb, ".", Mod])),
+    Payload = [Context | Params],
+    try crossbar_bindings:pmap(Event, Payload) of
+        []  -> create_default_resp_envelope(Context);
+        [JObj | _] -> JObj
+    catch
+        _:_:_ -> create_default_resp_envelope(Context)
+    end.
+
+-spec create_default_resp_envelope(cb_context:context()) -> kz_json:object().
+create_default_resp_envelope(Context) ->
     Resp = case cb_context:response(Context) of
                {'ok', RespData} ->
                    [{<<"auth_token">>, cb_context:auth_token(Context)}
