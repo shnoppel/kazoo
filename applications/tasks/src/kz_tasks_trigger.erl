@@ -83,11 +83,14 @@ maybe_start_link('true') ->
 maybe_start_link('false') ->
     do_link(kz_globals:where_is(?MODULE)).
 
+%%------------------------------------------------------------------------------
+%% @doc This node is enabled to run auto compaction job.
+%% @end
+%%------------------------------------------------------------------------------
 -spec do_start_link(kz_types:startlink_ret()) -> kz_types:startlink_ret().
 do_start_link({'error', {'already_started', Pid}}) ->
-    %% This node is enabled to run auto compaction job and the process looks to be
-    %% registered by another node so it needs to stop it and then try to get it registered
-    %% by this node.
+    %% The process looks to be registered by another node so it needs to stop it and then
+    %% try to get it registered by this node.
     lager:info("auto compaction enabled but the process looks to be registered by another node, killing it"),
     case erlang:is_process_alive(Pid) of
         'true' -> gen_server:stop(?SERVER
@@ -99,19 +102,21 @@ do_start_link({'error', {'already_started', Pid}}) ->
     %% Try again.
     maybe_start_link(?COMPACT_AUTOMATICALLY);
 do_start_link(Other) ->
-    %% This node is enabled to run auto compaction job and the process was registered by
-    %% this node.
+    %% The process was registered by this node.
     lager:info("auto compaction enabled and process registered (hopefully) by this node"),
     Other.
 
+%%------------------------------------------------------------------------------
+%% @doc This node is disabled to run auto compaction job.
+%% @end
+%%------------------------------------------------------------------------------
 -spec do_link('undefined' | pid()) -> {'ok', pid()}.
 do_link('undefined') ->
     lager:info("auto compaction disabled and process not registered by any other node yet, retrying"),
     maybe_start_link(?COMPACT_AUTOMATICALLY);
 do_link(Pid) ->
     lager:info("auto compaction disabled, linking to process registered by another node"),
-    %% This node is disabled to run auto compaction job and the process was registered
-    %% somewhere else (another node), then link to it.
+    %% The process was registered somewhere else (another node), then link to it.
     'true' = link(Pid),
     {'ok', Pid}.
 

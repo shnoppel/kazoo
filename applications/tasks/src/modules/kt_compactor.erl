@@ -351,6 +351,7 @@ do_compact_node_db(Compactor) ->
 
 -spec do_compact_db(kz_term:ne_binary()) -> rows().
 do_compact_db(Database) ->
+    lager:debug("about to start compacting ~p db", [Database]),
     do_compact_db(Database, ?HEUR_RATIO).
 
 -spec do_compact_db(kz_term:ne_binary(), heuristic()) -> rows().
@@ -374,7 +375,13 @@ do_compact_db_by_nodes(?MATCH_MODB_SUFFIX_RAW(_AccountId, _Year, _Month)=MODB, H
 do_compact_db_by_nodes(Database, Heuristic) ->
     AdminDbs = kazoo_couch:get_admin_dbs(),
     lager:info("opening in ~s: ~p", [AdminDbs, Database]),
-    {'ok', DbInfo} = kz_datamgr:open_doc(AdminDbs, Database),
+    {'ok', DbInfo} = case kz_datamgr:open_doc(AdminDbs, Database) of
+                         {'ok', _} = Result ->
+                             Result;
+                         Error ->
+                             lager:info("failed opening in ~s: ~p with error: ~p", [AdminDbs, Database, Error]),
+                             {'ok', kz_json:new()}
+                     end,
     kz_json:foldl(fun(Node, _, Rows) ->
                           do_compact_db_by_node(Node, Heuristic, Database, Rows)
                   end
@@ -384,6 +391,7 @@ do_compact_db_by_nodes(Database, Heuristic) ->
 
 -spec do_compact_db_by_node(kz_term:ne_binary(), heuristic(), kz_term:ne_binary(), rows()) -> rows().
 do_compact_db_by_node(Node, Heuristic, Database, Acc) ->
+    lager:debug("about to start compacting ~p db on node ~p", [Database, Node]),
     #{'server' := {_App, #server{}=Conn}} = kzs_plan:plan(),
     case get_node_connections(Node, Conn) of
         {'error', _E} ->
@@ -395,6 +403,7 @@ do_compact_db_by_node(Node, Heuristic, Database, Acc) ->
 
 -spec do_compact_db_by_node(kz_term:ne_binary(), heuristic(), kz_data:connection(), kz_data:connection(), kz_term:ne_binary(), rows()) -> rows().
 do_compact_db_by_node(Node, Heuristic, APIConn, AdminConn, Database, Acc) ->
+    lager:debug("compacting ~p db on node ~p", [Database, Node]),
     case do_compact_node(Node, Heuristic, APIConn, AdminConn, [Database]) of
         [] -> Acc;
         [Row] -> [Row | Acc]
@@ -474,12 +483,14 @@ get_dbs_sizes(Dbs) ->
 -spec get_db_disk_and_data_fold(#server{}
                                ,kz_term:ne_binary()
                                ,{[db_and_sizes()], non_neg_integer()}
-                               , pos_integer()
+                               ,pos_integer()
                                ) -> {[db_and_sizes()], pos_integer()}.
 get_db_disk_and_data_fold(Conn, UnencDb, {_, Counter} = State, ChunkSize)
   when Counter rem ChunkSize =:= 0 ->
-    %% Every `ChunkSize' handled requests, sleep 100ms (give the db a rest).
-    timer:sleep(100),
+    %% Every `ChunkSize' handled requests, sleep `Sleep'ms (give the db a rest).
+    Sleep = 200,
+    lager:debug("~p dbs read, resting for ~p ms", [Counter, Sleep]),
+    timer:sleep(Sleep),
     do_get_db_disk_and_data_fold(Conn, UnencDb, State);
 get_db_disk_and_data_fold(Conn, UnencDb, State, _ChunkSize) ->
     do_get_db_disk_and_data_fold(Conn, UnencDb, State).
