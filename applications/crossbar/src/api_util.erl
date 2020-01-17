@@ -1268,7 +1268,7 @@ create_resp_content(Req0, Context) ->
             case cb_context:req_value(Context, <<"jsonp">>) of
                 'undefined' ->
                     {JSON
-                    ,cowboy_req:set_resp_header(<<"content-type">>, <<"application/json">>, Req0)
+                    ,Req0
                     };
                 JsonFun when is_binary(JsonFun) ->
                     lager:debug("jsonp wrapping in ~s: ~p", [JsonFun, JSON]),
