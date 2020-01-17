@@ -528,7 +528,7 @@ validators_fold(Context, [Setter | Setters]) ->
     NewContext = setters_fold(Setter, Context),
     case resp_status(NewContext) of
         'success' -> validators_fold(NewContext, Setters);
-        'error' -> NewContext
+        _Else -> NewContext
     end.
 
 -spec set_account_id(context(), kz_term:ne_binary()) -> context().
