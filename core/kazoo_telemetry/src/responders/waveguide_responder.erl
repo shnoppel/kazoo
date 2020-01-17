@@ -35,9 +35,11 @@
 -define(RETRY_INTERVAL, 60000).
 -define(TRANSITION_TIMER, 0).
 
+-define(MAX_RETRIES, 3).
+
 -include("waveguide.hrl").
 
--record(state, {}).
+-record(state, {retry = 0 :: non_neg_integer()}).
 
 -type state() :: #state{}.
 -type statem_events() :: 'ping' | 'timeout' | 'wakeup'.
@@ -57,11 +59,7 @@
 %%------------------------------------------------------------------------------
 -spec start_link() -> kz_types:startlink_ret().
 start_link()  ->
-    case ?WG_ENABLED of
-        'false' -> 'ignore';
-        'true' ->
-            gen_statem:start_link({'local', ?SERVER}, ?MODULE, [], [])
-    end.
+    gen_statem:start_link({'local', ?SERVER}, ?MODULE, [], []).
 
 -spec stop() -> 'ok'.
 stop() ->
@@ -124,14 +122,14 @@ grace_period('enter', _OldState, State) ->
 grace_period('cast', 'ping', State) ->
     case wg_util:days_remaining() of
         Days when Days > 0 ->
-            lager:notice("waveguide grace period has ~p days remaining", [Days]),
+            lager:notice("kazoo telemetry grace period has ~p days remaining", [Days]),
             _ = create_alert(Days),
-            {'keep_state_and_data',[{'state_timeout', ?DAY_IN_MS, 'retry'}]};
+            {'keep_state_and_data', [{'state_timeout', ?DAY_IN_MS, 'retry'}]};
         _ ->
             {'next_state', 'activating', State}
     end;
 grace_period('state_timeout', 'retry', _State) ->
-    lager:notice("grace period expired ... activating waveguide."),
+    lager:notice("grace period expired ... activating telemetry."),
     'repeat_state_and_data'.
 
 %%------------------------------------------------------------------------------
@@ -139,21 +137,21 @@ grace_period('state_timeout', 'retry', _State) ->
 %% @end
 %%------------------------------------------------------------------------------
 -spec activating(gen_statem:event_type(), statem_events(), state()) -> statem_reply().
-activating('enter', _OldState, State) ->
-    lager:notice("entered activation state"),
+activating('enter', _OldState, #state{retry=Retries}=State) when Retries < ?MAX_RETRIES ->
     _ = timer:apply_after(?TRANSITION_TIMER, 'gen_statem', 'cast', [?SERVER, 'ping']),
     {'keep_state', State};
-activating('cast', 'ping', State) ->
+activating('enter', _OldState, State) ->
+    _ = timer:apply_after(?RETRY_INTERVAL, 'gen_statem', 'cast', [?SERVER, 'ping']),
+    {'keep_state', State#state{retry=0}};
+activating('cast', 'ping', #state{retry=Retries}=State) ->
     {'ok', Data} = waveguide_reducer:ping(?WG_ACTIVATION_PING),
     case wg_httpc:post(Data) of
         {'ok', _} ->
             {'next_state', 'handshaking', State};
         {'retry', _} ->
-            lager:notice("activation retry initiated"),
-            {'keep_state_and_data',[{'state_timeout', ?TRANSITION_TIMER, 'retry'}]}
+            {'keep_state', State#state{retry=Retries+1}, [{'state_timeout', ?TRANSITION_TIMER, 'retry'}]}
     end;
 activating('state_timeout', 'retry', _State) ->
-    lager:debug("activation timeout, scheduling retry"),
     'repeat_state_and_data'.
 
 %%------------------------------------------------------------------------------
@@ -161,20 +159,21 @@ activating('state_timeout', 'retry', _State) ->
 %% @end
 %%------------------------------------------------------------------------------
 -spec handshaking(gen_statem:event_type(), statem_events(), state()) -> statem_reply().
-handshaking('enter', _OldState, State) ->
+handshaking('enter', _OldState, #state{retry=Retries}=State) when Retries < ?MAX_RETRIES ->
     _ = timer:apply_after(?TRANSITION_TIMER, 'gen_statem', 'cast', [?SERVER, 'ping']),
     {'keep_state', State};
-handshaking('cast', 'ping', State) ->
-    lager:notice("intiating handshake ping"),
+handshaking('enter', _OldState, State) ->
+    _ = timer:apply_after(?RETRY_INTERVAL, 'gen_statem', 'cast', [?SERVER, 'ping']),
+    {'keep_state', State#state{retry=0}};
+handshaking('cast', 'ping', #state{retry=Retries}=State) ->
     {'ok', Data} = waveguide_reducer:ping(?WG_HANDSHAKE_PING),
     case wg_httpc:post(Data) of
         {'retry', _} ->
-            {'keep_state_and_data',[{'state_timeout', ?TRANSITION_TIMER, 'retry'}]};
+            {'keep_state', State#state{retry=Retries+1}, [{'state_timeout', ?TRANSITION_TIMER, 'retry'}]};
         {'ok', _} ->
             {'next_state', 'submitting', State}
     end;
 handshaking('state_timeout', 'retry', _State) ->
-    lager:debug("handshake timeout, scheduling retry"),
     'repeat_state_and_data'.
 
 %%------------------------------------------------------------------------------
@@ -182,20 +181,21 @@ handshaking('state_timeout', 'retry', _State) ->
 %% @end
 %%------------------------------------------------------------------------------
 -spec submitting(gen_statem:event_type(), statem_events(), state()) -> statem_reply().
-submitting('enter', _OldState, State) ->
+submitting('enter', _OldState, #state{retry=Retries}=State) when Retries < ?MAX_RETRIES ->
     _ = timer:apply_after(?TRANSITION_TIMER, 'gen_statem', 'cast', [?SERVER, 'ping']),
     {'keep_state', State};
-submitting('cast', 'ping', State) ->
-    lager:notice("initiating waveguide ping"),
+submitting  ('enter', _OldState, State) ->
+    _ = timer:apply_after(?RETRY_INTERVAL, 'gen_statem', 'cast', [?SERVER, 'ping']),
+    {'keep_state', State#state{retry=0}};
+submitting('cast', 'ping', #state{retry=Retries}=State) ->
     {'ok', Data} = waveguide_reducer:ping(?WG_MAIN_PING),
     case wg_httpc:post(Data) of
         {'retry', _} ->
-            {'keep_state_and_data',[{'state_timeout', ?TRANSITION_TIMER, 'timeout'}]};
+            {'keep_state', State#state{retry=Retries+1}, [{'state_timeout', ?TRANSITION_TIMER, 'timeout'}]};
         {'ok', _} ->
             {'next_state', 'waiting', State}
     end;
 submitting('state_timeout', 'timeout', _State) ->
-    lager:debug("main ping timeout, scheduling retry"),
     'repeat_state_and_data'.
 
 %%------------------------------------------------------------------------------
@@ -204,9 +204,8 @@ submitting('state_timeout', 'timeout', _State) ->
 %%------------------------------------------------------------------------------
 -spec waiting(gen_statem:event_type(), statem_events(), state()) -> statem_reply().
 waiting('enter', _OldState, State) ->
-    {'keep_state', State, [{'state_timeout', ?DAY_IN_SECONDS, 'wakeup'}]};
+    {'keep_state', State, [{'state_timeout', ?DAY_IN_MS, 'wakeup'}]};
 waiting('state_timeout', 'wakeup', State) ->
-    lager:debug("waveguide_responder waking up, scheduling main ping."),
     {'next_state', 'submitting', State}.
 
 %%%=============================================================================
