@@ -32,26 +32,6 @@
             "default": true,
             "description": "telemetry include_services",
             "type": "boolean"
-        },
-        "leader_app": {
-            "default": "ecallmgr",
-            "description": "telemetry leader_app",
-            "type": "string"
-        },
-        "leader_tick_ms": {
-            "default": 60000,
-            "description": "telemetry leader_tick_ms",
-            "type": "integer"
-        },
-        "responders": {
-            "default": [
-                "waveguide_responder"
-            ],
-            "description": "telemetry responders",
-            "items": {
-                "type": "string"
-            },
-            "type": "array"
         }
     },
     "type": "object"

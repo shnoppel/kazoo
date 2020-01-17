@@ -6,36 +6,6 @@
         "activation": {
             "description": "telemetry waveguide activation",
             "type": "integer"
-        },
-        "cluster_id_anonymized": {
-            "default": true,
-            "description": "telemetry waveguide cluster_id_anonymized",
-            "type": "boolean"
-        },
-        "grace_period": {
-            "default": 1209600,
-            "description": "telemetry waveguide grace_period",
-            "type": "integer"
-        },
-        "hash_algorithm": {
-            "default": "sha",
-            "description": "telemetry waveguide hash_algorithm",
-            "type": "string"
-        },
-        "include_services": {
-            "default": true,
-            "description": "telemetry waveguide include_services",
-            "type": "boolean"
-        },
-        "waveguide_enabled": {
-            "default": true,
-            "description": "telemetry waveguide waveguide_enabled",
-            "type": "boolean"
-        },
-        "waveguide_url": {
-            "default": "http://waveguide.p.zswitch.net",
-            "description": "telemetry waveguide waveguide_url",
-            "type": "string"
         }
     },
     "type": "object"
