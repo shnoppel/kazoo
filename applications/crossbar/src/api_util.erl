@@ -16,6 +16,7 @@
 -export([is_cors_preflight/1
         ,is_cors_request/1
         ,add_cors_headers/2
+        ,add_req_cors_headers/2
         ,allow_methods/3
         ,path_tokens/1
         ,parse_path_tokens/2
@@ -113,6 +114,11 @@ is_cors_request(Req, [ReqHdr|ReqHdrs]) ->
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
+-spec add_req_cors_headers(cb_context:context(), cowboy_req:req()) ->
+          cowboy_req:req().
+add_req_cors_headers(Context, Req) ->
+    add_cors_headers(Req, Context).
+
 -spec add_cors_headers(cowboy_req:req(), cb_context:context()) ->
           cowboy_req:req().
 add_cors_headers(Req, Context) ->
