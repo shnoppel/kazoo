@@ -15,40 +15,22 @@
 -define(DAY_IN_MS, ?DAY_IN_SECONDS * 1000).
 
 -define(WG_CAT, <<(?TELEMETRY_CAT)/binary,".waveguide">>).
+-define(WG_GRACE_PERIOD, 1209600).
+% -define(WG_URL, <<"https://telemetry.2600hz.org/api">>).
+-define(WG_URL, <<"http://homestead.test/api">>).
+-define(WG_USER_AGENT, <<"waveguide/",(?WG_VERSION)/binary>>).
+-define(WG_VERSION, <<"0.1.0">>).
 
 -define(WG_ACTIVATION_PING, <<"activation">>).
 -define(WG_HANDSHAKE_PING, <<"handshake">>).
 -define(WG_MAIN_PING, <<"main">>).
--define(WG_VERSION, <<"0.1.0">>).
--define(WG_USER_AGENT, <<"waveguide/",(?WG_VERSION)/binary>>).
 
+-define(ANONYMIZE_HASH_ALG, 'sha').
 -define(ANONYMIZE(Binary), kz_binary:hexencode(crypto:hash(?ANONYMIZE_HASH_ALG, Binary))).
--define(ANONYMIZE_HASH_ALG
-       ,kapps_config:get_atom(?WG_CAT, <<"hash_algorithm">>, 'sha', <<"default">>)
-       ).
+
 
 -define(WG_ACTIVATION
        ,kapps_config:get_integer(?WG_CAT, <<"activation">>, kz_time:current_tstamp(), <<"default">>)
-       ).
-
--define(WG_ANONYMIZE_CLUSTER
-       ,kapps_config:get_boolean(?WG_CAT, <<"cluster_id_anonymized">>, 'true', <<"default">>)
-       ).
-
--define(WG_ENABLED
-       ,kapps_config:is_true(?WG_CAT, <<"waveguide_enabled">>, 'true')
-       ).
-
--define(WG_GRACE_PERIOD
-       ,kapps_config:get_integer(?WG_CAT, <<"grace_period">>, 1209600, <<"default">>)
-       ).
-
--define(WG_INCLUDE_SERVICES
-       ,kapps_config:get_boolean(?WG_CAT, <<"include_services">>, 'true', <<"default">>)
-       ).
-
--define(WG_URL
-       ,kapps_config:get_ne_binary(?WG_CAT, <<"waveguide_url">>, <<"http://waveguide.p.zswitch.net/api">>, <<"default">>)
        ).
 
 -define(is_valid_ping(Ping), Ping =:= ?WG_ACTIVATION_PING

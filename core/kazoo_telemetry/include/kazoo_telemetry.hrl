@@ -10,21 +10,28 @@
 -ifndef(KAZOO_TELEMETRY_HRL).
 
 -define(TELEMETRY_CAT, <<"telemetry">>).
+-define(TM_LEADER_TICK, 60000).
+-define(TM_LEADER_APP, <<"kazoo_telemetry">>).
+-define(TM_RESPONDERS, [<<"waveguide_responder">>]).
 
--define(TM_DEFAULT_LEADER_TICK, 60000).
--define(TM_DEFAULT_LEADER_APP, <<"ecallmgr">>).
--define(TM_DEFAULT_RESPONDERS, [<<"waveguide_responder">>]).
-
--define(TM_LEADER_TICK
-       ,kapps_config:get_integer(?TELEMETRY_CAT, <<"leader_tick_ms">>, ?TM_DEFAULT_LEADER_TICK, <<"default">>)
+-define(ANONYMIZE_CLUSTER
+       ,kapps_config:get_boolean(?TELEMETRY_CAT, <<"cluster_id_anonymized">>, 'true', <<"default">>)
        ).
 
--define(TM_LEADER_APP
-       ,kapps_config:get_ne_binary(?TELEMETRY_CAT, <<"leader_app">>, ?TM_DEFAULT_LEADER_APP, <<"default">>)
+-define(INCLUDE_APPS
+       ,kapps_config:get_boolean(?TELEMETRY_CAT, <<"include_apps">>, 'true', <<"default">>)
        ).
-
--define(TM_RESPONDERS
-       ,kapps_config:get_ne_binaries(?TELEMETRY_CAT, <<"responders">>, ?TM_DEFAULT_RESPONDERS, <<"default">>)
+-define(INCLUDE_DATABASE
+       ,kapps_config:get_boolean(?TELEMETRY_CAT, <<"include_database">>, 'true', <<"default">>)
+       ).
+-define(INCLUDE_FREESWITCH
+       ,kapps_config:get_boolean(?TELEMETRY_CAT, <<"include_freeswitch">>, 'true', <<"default">>)
+       ).
+-define(INCLUDE_KAMAILIO
+       ,kapps_config:get_boolean(?TELEMETRY_CAT, <<"include_kamailio">>, 'true', <<"default">>)
+       ).
+-define(INCLUDE_SERVICES
+       ,kapps_config:get_boolean(?TELEMETRY_CAT, <<"include_services">>, 'true', <<"default">>)
        ).
 
 -define(KAZOO_TELEMETRY_HRL, 'true').
