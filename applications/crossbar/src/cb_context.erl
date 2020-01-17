@@ -1046,6 +1046,8 @@ add_system_error('account_cant_create_tree', Context) ->
     build_system_error(500, 'account_cant_create_tree', <<"account creation fault">>, Context);
 add_system_error('account_has_descendants', Context) ->
     build_system_error(500, 'account_has_descendants', <<"account has descendants">>, Context);
+add_system_error('not_implemented', Context) ->
+    build_system_error(501, 'not_implemented', <<"not implemented">>, Context);
 add_system_error('faulty_request', Context) ->
     build_system_error(404, 'faulty_request', <<"faulty request">>, Context);
 
