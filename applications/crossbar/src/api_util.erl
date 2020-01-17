@@ -629,9 +629,11 @@ req_noun_requires_envelope(_Context, []) -> 'true';
 req_noun_requires_envelope(Context, [{Mod, Params} | _]) ->
     Event = create_event_name(Context, <<"requires_envelope.", Mod/binary>>),
     Payload = [Context | Params],
-    case crossbar_bindings:pmap(Event, Payload) of
-        [Value | _] -> Value;
+    try crossbar_bindings:pmap(Event, Payload) of
+        [Value | _] when is_boolean(Value) -> Value;
         _Else -> 'true'
+    catch
+        _:_:_ -> 'true'
     end.
 
 -spec validate_request_envelope(kz_json:object()) -> 'true' | validation_errors().
