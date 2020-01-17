@@ -55,6 +55,8 @@
         ,create_event_name/2
 
         ,encode_start_key/1, decode_start_key/1
+
+        ,exec_req/2
         ]).
 
 -include_lib("kernel/include/file.hrl").
@@ -85,6 +87,22 @@
 -type resp_file() :: {'sendfile',  non_neg_integer(),  non_neg_integer(), file:name_all()}.
 -type resp_content_return() :: {kz_term:ne_binary() | iolist() | resp_file(), cowboy_req:req()}.
 -type resp_content_fun() :: fun((cowboy_req:req(), cb_context:context()) ->  resp_content_return()).
+
+-type req_fun_1() :: fun((cowboy_req:req()) -> cowboy_req:req()).
+-type req_fun_2() :: fun((any(), cowboy_req:req()) -> cowboy_req:req()).
+-type req_fun_3() :: fun((any(), any(), cowboy_req:req()) -> cowboy_req:req()).
+-type req_fun() :: req_fun_1() | req_fun_2() | req_fun_3().
+-export_type([req_fun/0
+             ,req_fun_1/0
+             ,req_fun_2/0
+             ,req_fun_3/0
+             ,req_funs/0
+             ]).
+
+-type req_kv() :: req_fun_1() |
+                  {req_fun_2(), any()} |
+                  {req_fun_3(), any(), any()}.
+-type req_funs() :: [req_kv()].
 
 %%------------------------------------------------------------------------------
 %% @doc Attempts to determine if this is a cross origin resource preflight request
@@ -1756,3 +1774,14 @@ create_event_name(Context, Segments) when is_list(Segments) ->
 create_event_name(Context, Name) ->
     ApiVersion = cb_context:api_version(Context),
     <<ApiVersion/binary, "_resource.", Name/binary>>.
+
+
+-spec exec_req(cowboy_req:req(), req_funs()) -> cowboy_req:req().
+exec_req(Req, []) -> Req;
+exec_req(Req, [_|_]=Funs) ->
+    lists:foldl(fun exec_req_fold/2, Req, Funs).
+
+-spec exec_req_fold(req_kv(), cowboy_req:req()) -> cowboy_req:req().
+exec_req_fold({F, V}, Req) -> F(V, Req);
+exec_req_fold({F, K, V}, Req) -> F(K, V, Req);
+exec_req_fold(F, Req) when is_function(F, 1) -> F(Req).
