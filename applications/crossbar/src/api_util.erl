@@ -57,6 +57,7 @@
         ,encode_start_key/1, decode_start_key/1
 
         ,exec_req/2
+        ,get_request_body/1
         ]).
 
 -include_lib("kernel/include/file.hrl").
