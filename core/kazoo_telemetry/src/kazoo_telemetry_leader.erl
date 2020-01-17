@@ -86,11 +86,11 @@ handle_cast('leader_change', #state{leader=OldLeader}=State) ->
     NewState = State#state{leader=leader()},
     case NewState#state.leader =:= node() of
         'false' ->
-            lager:debug("kazoo_telemetry leader is now ~s.", [NewState#state.leader]),
+            lager:debug("telemetry leader is now ~s.", [NewState#state.leader]),
             _ = maybe_stop_responders(NewState, OldLeader =:= node()),
             {'noreply', NewState};
         'true' ->
-            lager:debug("elected kazoo_telemetry_leader starting responders"),
+            lager:debug("elected telemetry leader starting responders"),
             _Pids = lists:foldl(fun(App, Acc) -> {'ok', Pid} = (kz_term:to_atom(App)):start_link(), [{App, Pid} | Acc] end,[], State#state.responders),
             {'noreply', NewState}
     end;

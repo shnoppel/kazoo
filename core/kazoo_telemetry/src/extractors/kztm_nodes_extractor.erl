@@ -65,9 +65,12 @@ extract_node_metadata(#kz_node{node=NodeName, version=Version, zone=Zone}=Node, 
 %% @end
 %%------------------------------------------------------------------------------
 -spec node_type(kz_types:kz_node()) -> kz_term:ne_binary().
-node_type(#kz_node{kapps=[{<<"ecallmgr">>=NodeType, _}]}) -> NodeType;
 node_type(#kz_node{kapps=[{<<"kamailio">>=NodeType, _}]}) -> NodeType;
-node_type(#kz_node{}) -> <<"kapps">>.
+node_type(#kz_node{kapps=Kapps}) ->
+    case proplists:is_defined(<<"ecallmgr">>, Kapps) of
+        'true' -> <<"ecallmgr">>;
+        _ -> <<"kapps">>
+    end.
 
 %%------------------------------------------------------------------------------
 %% @doc
