@@ -38,6 +38,7 @@
 
          %% Content
         ,create_resp_content/2
+        ,create_resp_body/2
         ,create_resp_file/2
         ,create_csv_resp_content/2
         ,create_binary_resp_content/2
@@ -1253,6 +1254,11 @@ maybe_cleanup_file(File) ->
 cleanup_file(File) ->
     'ok' = file:delete(File),
     lager:debug("deleted file ~s", [File]).
+
+-spec create_resp_body(cb_context:context(), cowboy_req:req()) -> cowboy_req:req().
+create_resp_body(Context, Req0) ->
+    {Content, Req} = create_resp_content(Req0, Context),
+    cowboy_req:set_resp_body(Content, Req).
 
 %%------------------------------------------------------------------------------
 %% @doc This function will create the content for the response body.
